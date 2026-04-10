@@ -40,7 +40,7 @@ export default function DashboardPage() {
 
     if (!uc) { setLoading(false); return; }
     setCompanyId(uc.company_id);
-    setCompanyName((uc.company as { name: string } | null)?.name ?? 'Your Company');
+    setCompanyName(((uc.company as unknown) as { name: string } | null)?.name ?? 'Your Company');
 
     // AR outstanding
     const { data: arData } = await supabase

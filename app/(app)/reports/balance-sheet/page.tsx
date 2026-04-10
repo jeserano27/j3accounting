@@ -39,7 +39,7 @@ export default function BalanceSheetPage() {
       .then(({ data }) => {
         if (data) {
           setCompanyId(data.company_id);
-          setCompanyName((data.company as { name: string } | null)?.name ?? '');
+          setCompanyName(((data.company as unknown) as { name: string } | null)?.name ?? '');
         }
       });
   }, []);
@@ -64,7 +64,7 @@ export default function BalanceSheetPage() {
 
     const map: Record<string, AccountRow> = {};
     for (const line of data) {
-      const acct = line.account as AccountRow | null;
+      const acct = (line.account as unknown) as AccountRow | null;
       if (!acct) continue;
       if (!['asset', 'liability', 'equity'].includes(acct.account_type)) continue;
       if (!map[acct.id]) {

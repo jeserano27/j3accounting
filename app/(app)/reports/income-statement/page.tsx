@@ -48,7 +48,7 @@ export default function IncomeStatementPage() {
       .then(({ data }) => {
         if (data) {
           setCompanyId(data.company_id);
-          setCompanyName((data.company as { name: string } | null)?.name ?? '');
+          setCompanyName(((data.company as unknown) as { name: string } | null)?.name ?? '');
         }
       });
   }, []);
@@ -76,7 +76,7 @@ export default function IncomeStatementPage() {
     // Aggregate by account
     const map: Record<string, AccountRow> = {};
     for (const line of data) {
-      const acct = line.account as AccountRow | null;
+      const acct = (line.account as unknown) as AccountRow | null;
       if (!acct) continue;
       if (!['revenue', 'expense'].includes(acct.account_type)) continue;
       if (!map[acct.id]) {

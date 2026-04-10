@@ -77,7 +77,7 @@ export default function SettingsPage() {
 
     if (uc) {
       setCompanyId(uc.company_id);
-      const c = uc.company as Record<string, unknown>;
+      const c = (uc.company as unknown) as Record<string, unknown>;
       setForm({
         name: (c.name as string) ?? '',
         registered_name: (c.registered_name as string) ?? '',

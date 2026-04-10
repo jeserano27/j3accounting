@@ -51,7 +51,7 @@ export default function InvoiceDetailPage() {
     const { data: inv } = await supabase
       .from('invoices').select('*, customer:customers(*)').eq('id', id).single();
     if (!inv) { setLoading(false); return; }
-    setInvoice(inv as Invoice & { customer: Customer });
+    setInvoice((inv as unknown) as Invoice & { customer: Customer });
 
     const { data: lineData } = await supabase
       .from('invoice_lines').select('*').eq('invoice_id', id).order('line_order');

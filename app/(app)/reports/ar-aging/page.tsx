@@ -56,7 +56,7 @@ export default function ARAgingPage() {
       .then(({ data }) => {
         if (data) {
           setCompanyId(data.company_id);
-          setCompanyName((data.company as { name: string } | null)?.name ?? '');
+          setCompanyName(((data.company as unknown) as { name: string } | null)?.name ?? '');
         }
       });
   }, []);
@@ -83,7 +83,7 @@ export default function ARAgingPage() {
       return {
         invoice_id: inv.id,
         invoice_number: inv.invoice_number,
-        customer_name: (inv.customer as { name: string } | null)?.name ?? '—',
+        customer_name: ((inv.customer as unknown) as { name: string } | null)?.name ?? '—',
         invoice_date: inv.invoice_date,
         due_date: inv.due_date,
         total_amount: inv.total_amount,

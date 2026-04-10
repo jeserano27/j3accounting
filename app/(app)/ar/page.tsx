@@ -39,7 +39,7 @@ export default function ARPage() {
       .order('invoice_date', { ascending: false })
       .order('invoice_number', { ascending: false });
 
-    setInvoices((data ?? []) as InvoiceRow[]);
+    setInvoices((data ?? []) as unknown as InvoiceRow[]);
     setLoading(false);
   }
 

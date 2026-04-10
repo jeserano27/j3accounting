@@ -62,7 +62,7 @@ export default function BillDetailPage() {
     const { data: b } = await supabase
       .from('bills').select('*, supplier:suppliers(id,name,email)').eq('id', id).single();
     if (!b) { setLoading(false); return; }
-    setBill(b as Bill);
+    setBill((b as unknown) as Bill);
 
     const { data: lineData } = await supabase
       .from('bill_lines').select('*').eq('bill_id', id).order('line_order');

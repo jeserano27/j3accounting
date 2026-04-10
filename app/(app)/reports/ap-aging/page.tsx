@@ -57,7 +57,7 @@ export default function APAgingPage() {
       .then(({ data }) => {
         if (data) {
           setCompanyId(data.company_id);
-          setCompanyName((data.company as { name: string } | null)?.name ?? '');
+          setCompanyName(((data.company as unknown) as { name: string } | null)?.name ?? '');
         }
       });
   }, []);
@@ -84,7 +84,7 @@ export default function APAgingPage() {
       return {
         bill_id: b.id,
         bill_number: b.bill_number,
-        supplier_name: (b.supplier as { name: string } | null)?.name ?? '—',
+        supplier_name: ((b.supplier as unknown) as { name: string } | null)?.name ?? '—',
         supplier_ref: b.supplier_ref,
         bill_date: b.bill_date,
         due_date: b.due_date,
