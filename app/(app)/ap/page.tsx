@@ -48,7 +48,7 @@ export default function APPage() {
       .order('bill_date', { ascending: false })
       .order('bill_number', { ascending: false });
 
-    setBills((data ?? []) as BillRow[]);
+    setBills((data ?? []) as unknown as BillRow[]);
     setLoading(false);
   }
 
