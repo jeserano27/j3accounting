@@ -11,11 +11,24 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const navItems = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  children?: { href: string; label: string }[];
+};
+
+const navItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/coa', label: 'Chart of Accounts', icon: List },
   { href: '/journal', label: 'General Journal', icon: FileText },
-  { href: '/ar', label: 'Accounts Receivable', icon: CreditCard },
+  {
+    href: '/ar', label: 'Accounts Receivable', icon: CreditCard,
+    children: [
+      { href: '/ar', label: 'Invoices' },
+      { href: '/ar/customers', label: 'Customers' },
+    ],
+  },
   { href: '/ap', label: 'Accounts Payable', icon: Wallet },
   { href: '/cash', label: 'Cash Book', icon: Receipt },
   { href: '/expenses', label: 'Expenses', icon: Package },
@@ -75,16 +88,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               ? pathname === '/dashboard'
               : pathname.startsWith(item.href);
             return (
-              <Link key={item.href} href={item.href} onClick={() => setSidebarOpen(false)}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-teal-500/15 text-teal-400 border border-teal-500/20'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                )}>
-                <Icon className="w-4 h-4 shrink-0" />
-                {item.label}
-              </Link>
+              <div key={item.href}>
+                <Link href={item.href} onClick={() => setSidebarOpen(false)}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-teal-500/15 text-teal-400 border border-teal-500/20'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  )}>
+                  <Icon className="w-4 h-4 shrink-0" />
+                  {item.label}
+                </Link>
+                {item.children && isActive && (
+                  <div className="ml-7 mt-0.5 space-y-0.5">
+                    {item.children.map(child => (
+                      <Link key={child.href} href={child.href} onClick={() => setSidebarOpen(false)}
+                        className={cn(
+                          'block px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                          pathname === child.href
+                            ? 'text-teal-400'
+                            : 'text-slate-500 hover:text-slate-300'
+                        )}>
+                        {child.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>
