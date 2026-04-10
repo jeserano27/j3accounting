@@ -29,7 +29,13 @@ const navItems: NavItem[] = [
       { href: '/ar/customers', label: 'Customers' },
     ],
   },
-  { href: '/ap', label: 'Accounts Payable', icon: Wallet },
+  {
+    href: '/ap', label: 'Accounts Payable', icon: Wallet,
+    children: [
+      { href: '/ap', label: 'Bills' },
+      { href: '/ap/suppliers', label: 'Suppliers' },
+    ],
+  },
   { href: '/cash', label: 'Cash Book', icon: Receipt },
   { href: '/expenses', label: 'Expenses', icon: Package },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
