@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { TrendingUp, Scale, Users, Wallet, BarChart3 } from 'lucide-react';
+import { TrendingUp, Scale, Users, Wallet, BarChart3, TableProperties } from 'lucide-react';
 
 const reports = [
   {
@@ -17,6 +17,13 @@ const reports = [
     label: 'Balance Sheet',
     description: 'Assets, liabilities, and equity as of a selected date. Shows your company\'s financial position.',
     color: 'text-blue-600 bg-blue-50',
+  },
+  {
+    href: '/reports/trial-balance',
+    icon: TableProperties,
+    label: 'Trial Balance',
+    description: 'All account debit and credit balances as of a date. Verifies the books are in balance.',
+    color: 'text-violet-600 bg-violet-50',
   },
   {
     href: '/reports/ar-aging',

@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 const APP_ROUTES = [
   '/dashboard', '/coa', '/journal', '/ar', '/ap',
-  '/cash', '/expenses', '/reports', '/settings', '/tax', '/pos', '/inventory',
+  '/cash', '/expenses', '/reports', '/settings', '/tax', '/pos', '/inventory', '/join',
 ];
 
 export async function middleware(request: NextRequest) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Building2, User, Shield, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Building2, User, Shield, CheckCircle2, AlertCircle, Users, Plus, Copy, Check, Ban } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type CompanyForm = {
@@ -34,11 +34,20 @@ const MONTHS = [
 
 const TABS = [
   { id: 'company', label: 'Company Profile', icon: Building2 },
+  { id: 'team', label: 'Team', icon: Users },
   { id: 'account', label: 'My Account', icon: User },
   { id: 'security', label: 'Security', icon: Shield },
 ] as const;
 
 type Tab = typeof TABS[number]['id'];
+
+type TeamMember = { user_id: string; email: string; full_name: string | null; role: string; joined_at: string };
+type MemberInvite = { id: string; email: string; role: string; token: string; status: string; expires_at: string };
+
+const ROLES = ['owner', 'approver', 'encoder', 'viewer'] as const;
+const ROLE_LABELS: Record<string, string> = {
+  owner: 'Owner', approver: 'Approver', encoder: 'Encoder', viewer: 'Viewer',
+};
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('company');
@@ -55,6 +64,17 @@ export default function SettingsPage() {
   const [nameLoading, setNameLoading] = useState(false);
   const [nameSaved, setNameSaved] = useState(false);
 
+  // Team tab
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [memberInvites, setMemberInvites] = useState<MemberInvite[]>([]);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<typeof ROLES[number]>('encoder');
+  const [inviteCreating, setInviteCreating] = useState(false);
+  const [inviteError, setInviteError] = useState('');
+  const [copiedInvite, setCopiedInvite] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState('');
+  const [userRole, setUserRole] = useState('');
+
   // Security tab
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
@@ -64,6 +84,7 @@ export default function SettingsPage() {
   const [pwMsg, setPwMsg] = useState('');
 
   useEffect(() => { loadData(); }, []);
+  useEffect(() => { if (activeTab === 'team' && companyId) loadTeam(); }, [activeTab, companyId]);
 
   async function loadData() {
     const supabase = createClient();
@@ -100,9 +121,61 @@ export default function SettingsPage() {
     if (user) {
       setUserEmail(user.email ?? '');
       setFullName(user.user_metadata?.full_name ?? '');
+      setCurrentUserId(user.id);
     }
 
     setLoading(false);
+  }
+
+  async function loadTeam() {
+    if (!companyId) return;
+    const supabase = createClient();
+    const { data: members } = await supabase
+      .from('company_team')
+      .select('*')
+      .eq('company_id', companyId);
+    setTeam((members ?? []) as TeamMember[]);
+    const me = (members ?? []).find((m: TeamMember) => m.user_id === currentUserId);
+    setUserRole(me?.role ?? '');
+
+    const { data: invites } = await supabase
+      .from('company_member_invites')
+      .select('*')
+      .eq('company_id', companyId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+    setMemberInvites((invites ?? []) as MemberInvite[]);
+  }
+
+  async function createMemberInvite() {
+    if (!inviteEmail.trim() || !companyId) return;
+    setInviteCreating(true);
+    setInviteError('');
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase.from('company_member_invites').insert({
+      company_id: companyId,
+      invited_by: user!.id,
+      email: inviteEmail.trim().toLowerCase(),
+      role: inviteRole,
+    });
+    if (error) { setInviteError(error.message); }
+    else { setInviteEmail(''); await loadTeam(); }
+    setInviteCreating(false);
+  }
+
+  async function revokeInvite(id: string) {
+    const supabase = createClient();
+    await supabase.from('company_member_invites').update({ status: 'revoked' }).eq('id', id);
+    setMemberInvites(prev => prev.filter(i => i.id !== id));
+  }
+
+  function copyInviteLink(inv: MemberInvite) {
+    const link = `${window.location.origin}/join/${inv.token}`;
+    const msg = `You've been invited to join our team on J3 Accounting.\n\nRole: ${ROLE_LABELS[inv.role]}\nLink: ${link}\n\nThe link expires on ${new Date(inv.expires_at).toLocaleDateString()}.`;
+    navigator.clipboard.writeText(msg);
+    setCopiedInvite(inv.id);
+    setTimeout(() => setCopiedInvite(null), 2000);
   }
 
   async function saveCompany() {
@@ -324,6 +397,114 @@ export default function SettingsPage() {
               {saving ? 'Saving…' : 'Save Company Profile'}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ── Team ── */}
+      {activeTab === 'team' && (
+        <div className="space-y-6">
+          {/* Current members */}
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200">
+              <h2 className="text-sm font-semibold text-slate-700">Team Members</h2>
+            </div>
+            {team.length === 0 ? (
+              <div className="px-6 py-8 text-center text-slate-400 text-sm">No team members yet.</div>
+            ) : team.map(m => (
+              <div key={m.user_id} className="flex items-center justify-between px-6 py-3.5 border-t border-slate-100 hover:bg-slate-50">
+                <div>
+                  <p className="text-sm font-medium text-slate-800">{m.full_name || m.email}</p>
+                  {m.full_name && <p className="text-xs text-slate-400">{m.email}</p>}
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={cn(
+                    'px-2.5 py-0.5 rounded-full text-xs font-medium border',
+                    m.role === 'owner' ? 'bg-violet-50 text-violet-700 border-violet-200' :
+                    m.role === 'approver' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                    m.role === 'encoder' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                    'bg-slate-100 text-slate-600 border-slate-200'
+                  )}>
+                    {ROLE_LABELS[m.role] ?? m.role}
+                  </span>
+                  {m.user_id === currentUserId && (
+                    <span className="text-xs text-slate-400">(you)</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Pending invites */}
+          {memberInvites.length > 0 && (
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <div className="px-6 py-4 border-b border-slate-200">
+                <h2 className="text-sm font-semibold text-slate-700">Pending Invites</h2>
+              </div>
+              {memberInvites.map(inv => (
+                <div key={inv.id} className="flex items-center justify-between px-6 py-3.5 border-t border-slate-100 hover:bg-slate-50">
+                  <div>
+                    <p className="text-sm text-slate-700">{inv.email}</p>
+                    <p className="text-xs text-slate-400">
+                      {ROLE_LABELS[inv.role]} · Expires {new Date(inv.expires_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => copyInviteLink(inv)} title="Copy invite link"
+                      className="p-1.5 rounded text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-colors">
+                      {copiedInvite === inv.id ? <Check className="w-3.5 h-3.5 text-teal-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                    <button onClick={() => revokeInvite(inv.id)} title="Revoke"
+                      className="p-1.5 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                      <Ban className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Invite new member — owners only */}
+          {(userRole === 'owner' || team.length === 0) && (
+            <div className="bg-white rounded-xl border border-slate-200 p-6">
+              <h2 className="text-sm font-semibold text-slate-700 mb-1">Invite a Team Member</h2>
+              <p className="text-xs text-slate-400 mb-4">
+                They must first have a j3accounting account. Send them the invite link after creating it.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="email"
+                  placeholder="colleague@email.com"
+                  value={inviteEmail}
+                  onChange={e => setInviteEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && createMemberInvite()}
+                  className="flex-1 px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-400"
+                />
+                <select
+                  value={inviteRole}
+                  onChange={e => setInviteRole(e.target.value as typeof inviteRole)}
+                  className="px-3 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-400"
+                >
+                  {ROLES.filter(r => r !== 'owner').map(r => (
+                    <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={createMemberInvite}
+                  disabled={inviteCreating || !inviteEmail.trim()}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 transition-colors disabled:opacity-60 whitespace-nowrap"
+                >
+                  <Plus className="w-4 h-4" /> {inviteCreating ? 'Creating…' : 'Create Invite'}
+                </button>
+              </div>
+              {inviteError && <p className="mt-2 text-sm text-red-600">{inviteError}</p>}
+              <div className="mt-4 bg-slate-50 rounded-lg p-3 text-xs text-slate-500 space-y-1">
+                <p className="font-medium text-slate-600">Role permissions</p>
+                <p><span className="font-medium">Approver</span> — can post/approve journal entries and invoices</p>
+                <p><span className="font-medium">Encoder</span> — can create drafts, encode transactions</p>
+                <p><span className="font-medium">Viewer</span> — read-only access to all records</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
