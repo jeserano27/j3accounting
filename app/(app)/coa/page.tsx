@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Account, AccountType } from '@/lib/types';
-import { Plus, Search, ChevronDown, ChevronRight, Edit2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Plus, Search, ChevronDown, ChevronRight, Edit2, ToggleLeft, ToggleRight, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -63,6 +63,7 @@ export default function ChartOfAccountsPage() {
   const [form, setForm] = useState<AccountForm>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
+  const [seeding, setSeeding] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -149,6 +150,16 @@ export default function ChartOfAccountsPage() {
     loadData();
   }
 
+  async function seedDefaults() {
+    if (!companyId) return;
+    setSeeding(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc('seed_chart_of_accounts', { p_company_id: companyId });
+    if (error) alert('Seed failed: ' + error.message);
+    else await loadData();
+    setSeeding(false);
+  }
+
   async function toggleActive(acct: Account) {
     const supabase = createClient();
     await supabase.from('accounts').update({ is_active: !acct.is_active }).eq('id', acct.id);
@@ -183,12 +194,24 @@ export default function ChartOfAccountsPage() {
           <h1 className="text-2xl font-bold text-slate-900">Chart of Accounts</h1>
           <p className="text-slate-500 text-sm mt-0.5">PFRS-compliant account structure</p>
         </div>
-        <button
-          onClick={openNew}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" /> Add Account
-        </button>
+        <div className="flex items-center gap-3">
+          {accounts.length === 0 && !loading && (
+            <button
+              onClick={seedDefaults}
+              disabled={seeding}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-teal-300 text-teal-700 bg-teal-50 text-sm font-medium hover:bg-teal-100 transition-colors disabled:opacity-60"
+            >
+              <BookOpen className="w-4 h-4" />
+              {seeding ? 'Loading…' : 'Load Default PH Accounts'}
+            </button>
+          )}
+          <button
+            onClick={openNew}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" /> Add Account
+          </button>
+        </div>
       </div>
 
       {/* Search */}
