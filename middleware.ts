@@ -1,6 +1,11 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+const APP_ROUTES = [
+  '/dashboard', '/coa', '/journal', '/ar', '/ap',
+  '/cash', '/expenses', '/reports', '/settings', '/tax', '/pos', '/inventory',
+];
+
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -24,18 +29,39 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const { pathname } = request.nextUrl;
 
-  // Protect app routes
-  if (pathname.startsWith('/dashboard') || pathname.startsWith('/coa') ||
-      pathname.startsWith('/journal') || pathname.startsWith('/ar') ||
-      pathname.startsWith('/ap') || pathname.startsWith('/cash') ||
-      pathname.startsWith('/expenses') || pathname.startsWith('/reports') ||
-      pathname.startsWith('/settings') || pathname.startsWith('/tax') ||
-      pathname.startsWith('/pos') || pathname.startsWith('/inventory')) {
-    if (!user) return NextResponse.redirect(new URL('/login', request.url));
+  const isAppRoute = APP_ROUTES.some(r => pathname.startsWith(r));
+  const isAuthRoute = pathname === '/login' || pathname === '/register';
+  const isAdminRoute = pathname.startsWith('/admin');
+
+  // Not logged in → redirect to login
+  if ((isAppRoute || isAdminRoute) && !user) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  // Redirect logged-in users away from auth pages
-  if ((pathname === '/login' || pathname === '/register') && user) {
+  // Logged-in on app routes → verify they have a company (invite was valid at signup)
+  if (isAppRoute && user) {
+    const { data: uc } = await supabase
+      .from('user_companies')
+      .select('company_id')
+      .eq('user_id', user.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (!uc) {
+      return NextResponse.redirect(new URL('/pending', request.url));
+    }
+  }
+
+  // Admin route → only admin email allowed
+  if (isAdminRoute && user) {
+    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+    if (adminEmail && user.email !== adminEmail) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+  }
+
+  // Already logged in → skip auth pages
+  if (isAuthRoute && user) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
